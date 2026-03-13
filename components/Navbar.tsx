@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { 
   Search, 
@@ -12,24 +12,77 @@ import {
   Flame,
   Settings,
   LogOut,
-  HelpCircle
+  HelpCircle,
+  Bot,
+  AlertCircle,
+  CheckCircle
 } from "lucide-react"
+import AgentAlert from "./AgentAlert"
+
+interface Notification {
+  id: number
+  text: string
+  time: string
+  type: "warning" | "tip" | "celebration"
+  habitName?: string
+  agent?: string
+  read?: boolean
+}
 
 export default function Navbar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 1, text: "🔥 5-day streak achieved!", time: "2 min ago", type: "celebration", read: false },
+    { id: 2, text: "✨ New habit suggestion ready", time: "1 hour ago", type: "tip", read: false },
+    { id: 3, text: "📝 Don't forget to journal today", time: "3 hours ago", type: "tip", read: true },
+  ])
 
-  // Mock notifications
-  const notifications = [
-    { id: 1, text: "🔥 5-day streak achieved!", time: "2 min ago" },
-    { id: 2, text: "✨ New habit suggestion ready", time: "1 hour ago" },
-    { id: 3, text: "📝 Don't forget to journal today", time: "3 hours ago" }
-  ]
+  // Handle new agent notifications
+  const handleAgentNotification = (notification: Notification) => {
+    setNotifications(prev => [notification, ...prev])
+  }
+
+  // Mark notification as read
+  const markAsRead = (id: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    )
+  }
+
+  // Mark all as read
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    )
+  }
+
+  // Get unread count
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type: string) => {
+    switch(type) {
+      case "warning":
+        return <AlertCircle className="w-4 h-4 text-[#FF7AC6]" />
+      case "celebration":
+        return <Sparkles className="w-4 h-4 text-[#FFD84D]" />
+      case "tip":
+        return <Bot className="w-4 h-4 text-[#6DD3FF]" />
+      default:
+        return <Bell className="w-4 h-4" />
+    }
+  }
 
   return (
     <div className="relative w-full mb-6">
+      {/* Agent Alert Component */}
+      <AgentAlert onNewNotification={handleAgentNotification} />
+      
       {/* Decorative floating elements */}
       <div className="absolute -top-2 -left-2 w-8 h-8 bg-[#FF7AC6] border-2 border-black rounded-full animate-bounce-slow z-0" />
       <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-[#8C6CFF] border-2 border-black rotate-12 z-0" 
@@ -77,31 +130,81 @@ export default function Navbar() {
                   className="relative border-3 border-black p-2 hover:bg-[#FF7AC6] transition-colors"
                 >
                   <Bell className="w-5 h-5" />
-                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#FF7AC6] border-2 border-black rounded-full text-xs flex items-center justify-center font-black">
-                    3
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#FF7AC6] border-2 border-black rounded-full text-xs flex items-center justify-center font-black">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Notifications dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 border-4 border-black bg-white shadow-[8px_8px_0px_0px_#111111] z-50">
-                    <div className="p-3 border-b-4 border-black bg-[#FFD84D]">
+                  <div className="absolute right-0 mt-2 w-96 border-4 border-black bg-white shadow-[8px_8px_0px_0px_#111111] z-50">
+                    {/* Header */}
+                    <div className="p-3 border-b-4 border-black bg-[#FFD84D] flex justify-between items-center">
                       <h3 className="font-black flex items-center gap-2">
                         <Bell className="w-4 h-4" />
                         NOTIFICATIONS
                       </h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={markAllAsRead}
+                          className="text-xs border-2 border-black px-2 py-1 bg-white font-bold hover:bg-[#FF7AC6] transition-colors"
+                        >
+                          MARK ALL READ
+                        </button>
+                      )}
                     </div>
+                    
+                    {/* Notifications list */}
                     <div className="max-h-96 overflow-y-auto">
-                      {notifications.map((notif) => (
-                        <div key={notif.id} className="p-4 border-b-3 border-black hover:bg-[#FFF9E6] transition-colors">
-                          <p className="font-bold text-sm">{notif.text}</p>
-                          <p className="text-xs opacity-50 mt-1">{notif.time}</p>
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p className="font-bold opacity-50">No notifications</p>
                         </div>
-                      ))}
+                      ) : (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif.id} 
+                            className={`p-4 border-b-3 border-black transition-colors ${
+                              notif.read ? 'opacity-60 hover:opacity-100' : 'bg-[#FFF9E6]'
+                            } hover:bg-[#FFD84D] cursor-pointer`}
+                            onClick={() => markAsRead(notif.id)}
+                          >
+                            <div className="flex gap-3">
+                              <div className={`w-8 h-8 border-3 border-black flex items-center justify-center flex-shrink-0 ${
+                                notif.type === 'celebration' ? 'bg-[#FFD84D]' :
+                                notif.type === 'warning' ? 'bg-[#FF7AC6]' : 'bg-[#6DD3FF]'
+                              }`}>
+                                {getNotificationIcon(notif.type)}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-bold text-sm">{notif.text}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs opacity-50">{notif.time}</span>
+                                  {notif.agent && (
+                                    <span className="text-[10px] border border-black px-1 bg-[#8C6CFF] text-white font-bold">
+                                      AI AGENT
+                                    </span>
+                                  )}
+                                  {!notif.read && (
+                                    <span className="text-[10px] border border-black px-1 bg-[#FF7AC6] text-white font-bold">
+                                      NEW
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
+                    
+                    {/* Footer */}
                     <div className="p-3 border-t-4 border-black text-center">
                       <button className="font-bold text-sm hover:text-[#FF7AC6] transition-colors">
-                        VIEW ALL
+                        VIEW ALL NOTIFICATIONS
                       </button>
                     </div>
                   </div>

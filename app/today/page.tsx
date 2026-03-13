@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { getTodayDate } from "@/lib/getToday"
 import { 
   CheckCircle, 
@@ -52,15 +52,31 @@ export default function TodayPage() {
     year: "numeric",
   })
 
-  useEffect(() => {
-    loadData()
+  // Memoize fetch functions to prevent unnecessary re-renders
+  const fetchHabits = useCallback(async () => {
+    const res = await fetch("/api/habits")
+    if (!res.ok) throw new Error("Failed to fetch habits")
+    const data = await res.json()
+    return data
   }, [])
 
-  async function loadData() {
+  const fetchLogs = useCallback(async () => {
+    const res = await fetch(`/api/habitlogs?date=${today}`)
+    if (!res.ok) throw new Error("Failed to fetch logs")
+    const data = await res.json()
+    return data
+  }, [today])
+
+  const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      await Promise.all([fetchHabits(), fetchLogs()])
+      const [habitsData, logsData] = await Promise.all([
+        fetchHabits(),
+        fetchLogs()
+      ])
+      setHabits(habitsData)
+      setLogs(logsData)
     } catch (error) {
       console.error("Error loading data:", error)
       setError("Failed to load data. Please refresh the page.")
@@ -68,89 +84,83 @@ export default function TodayPage() {
       setLoading(false)
       setInitialLoad(false)
     }
-  }
+  }, [fetchHabits, fetchLogs])
 
-  async function fetchHabits() {
-    const res = await fetch("/api/habits")
-    if (!res.ok) throw new Error("Failed to fetch habits")
-    const data = await res.json()
-    setHabits(data)
-  }
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
-  async function fetchLogs() {
-    const res = await fetch(`/api/habitlogs?date=${today}`)
-    if (!res.ok) throw new Error("Failed to fetch logs")
-    const data = await res.json()
-    setLogs(data)
-  }
-
-  async function toggleHabit(habitId: string) {
-    setTogglingId(habitId)
-    setError(null)
-    
-    try {
-      // Find existing log for this habit today
-      const existingLog = logs.find(log => log.habitId === habitId)
-      const currentlyCompleted = existingLog?.completed || false
-      const newCompletedState = !currentlyCompleted
-      
-      console.log(`Toggling habit ${habitId} from ${currentlyCompleted} to ${newCompletedState}`)
-      
-      const res = await fetch("/api/habitlogs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          habitId,
-          date: today,
-          completed: newCompletedState
-        })
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || "Failed to toggle habit")
-      }
-
-      const responseData = await res.json()
-      console.log("Toggle response:", responseData)
-
-      // Update local logs state immediately for better UX
-      if (newCompletedState) {
-        // Adding a new log
-        setLogs(prev => [...prev, {
-          _id: responseData.log?._id || `temp-${Date.now()}`,
-          habitId,
-          date: today,
-          completed: true
-        }])
-      } else {
-        // Removing the log
-        setLogs(prev => prev.filter(log => log.habitId !== habitId))
-      }
-      
-      // Show confetti only when marking as completed (not when unchecking)
-      if (!currentlyCompleted) {
-        setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 2000)
-      }
-      
-    } catch (error) {
-      console.error("Error toggling habit:", error)
-      setError(error instanceof Error ? error.message : "Failed to update habit")
-      
-      // Revert the optimistic update by refreshing from server
-      await fetchLogs()
-    } finally {
-      setTogglingId(null)
+async function toggleHabit(habitId: string) {
+  setTogglingId(habitId)
+  setError(null)
+  
+  // Store previous state for rollback
+  const previousLogs = [...logs]
+  const currentlyCompleted = isCompleted(habitId)
+  const newCompletedState = !currentlyCompleted
+  
+  console.log("Toggling:", { habitId, currentlyCompleted, newCompletedState })
+  
+  try {
+    // Optimistic update
+    if (newCompletedState) {
+      // Adding a new log optimistically
+      setLogs(prev => [...prev, {
+        _id: `temp-${Date.now()}`,
+        habitId,
+        date: today,
+        completed: true
+      }])
+    } else {
+      // Removing the log optimistically
+      setLogs(prev => prev.filter(log => log.habitId !== habitId))
     }
+    
+    const res = await fetch("/api/habitlogs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        habitId,
+        date: today,
+        completed: newCompletedState
+      })
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      throw new Error(errorData.error || "Failed to toggle habit")
+    }
+
+    const responseData = await res.json()
+    console.log("API response:", responseData)
+    
+    // IMPORTANT: Always fetch fresh logs after toggle to ensure consistency
+    const freshLogs = await fetchLogs()
+    setLogs(freshLogs)
+    
+    // Show confetti only when marking as completed
+    if (!currentlyCompleted) {
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 2000)
+    }
+    
+  } catch (error) {
+    console.error("Error toggling habit:", error)
+    setError(error instanceof Error ? error.message : "Failed to update habit")
+    
+    // Rollback to previous state
+    setLogs(previousLogs)
+  } finally {
+    setTogglingId(null)
   }
+}
 
   function isCompleted(habitId: string): boolean {
-    // Make sure we're comparing strings correctly
-    return logs.some(log => log.habitId.toString() === habitId.toString())
-  }
+  // Make sure we're comparing strings correctly
+  return logs.some(log => log.habitId.toString() === habitId.toString())
+}
 
   // Calculate progress
   const totalHabits = habits.length
@@ -177,7 +187,7 @@ export default function TodayPage() {
     return matched || { icon: Zap, color: '#FF7AC6' }
   }
 
-  // Skeleton loader for better UX
+  // Skeleton loader
   if (initialLoad) {
     return (
       <div className="relative max-w-4xl mx-auto p-8">
