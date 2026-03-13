@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@uploadthing/react": "^7.3.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
     "groq-sdk": "^1.1.1",
@@ -20,7 +21,8 @@
     "next": "16.1.6",
     "react": "^19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.8.0"
+    "recharts": "^3.8.0",
+    "uploadthing": "^7.7.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

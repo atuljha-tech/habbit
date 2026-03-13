@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { 
   Plus, 
   Flame, 
@@ -17,7 +18,8 @@ import {
   Star,
   Award,
   TrendingUp,
-  XCircle
+  XCircle,
+  Camera
 } from "lucide-react"
 
 interface Habit {
@@ -218,18 +220,7 @@ export default function HabitsPage() {
             {/* Form header with tip */}
             {showCreateTip && (
               <div className="absolute -top-5 left-8 bg-[#FFD84D] border-4 border-black px-6 py-2 font-bold text-sm animate-bounce-slow">
-                💡{showCreateTip && (
-  <div className="absolute -top-5 left-8 bg-[#FFD84D] border-4 border-black px-6 py-2 font-bold text-sm animate-bounce-slow">
-    💡 TIP: Be specific! &quot;Morning meditation&quot; &gt; &quot;meditate&quot;
-    <button 
-      type="button"
-      onClick={() => setShowCreateTip(false)}
-      className="ml-3 font-black hover:text-[#FF7AC6]"
-    >
-      ✕
-    </button>
-  </div>
-)}
+                💡 TIP: Be specific! &quot;Morning meditation&quot; &gt; &quot;meditate&quot;
                 <button 
                   type="button"
                   onClick={() => setShowCreateTip(false)}
@@ -394,20 +385,31 @@ export default function HabitsPage() {
                       )}
 
                       {/* Footer with date and actions */}
-                      <div className="mt-6 pt-4 border-t-4 border-black flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          <Calendar className="w-3 h-3" />
-                          <span>{new Date(habit.createdAt).toLocaleDateString()}</span>
+                      <div className="mt-6 pt-4 border-t-4 border-black flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold">
+                            <Calendar className="w-3 h-3" />
+                            <span>{new Date(habit.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button className="border-3 border-black bg-white px-3 py-1 text-xs font-bold hover:bg-[#FF7AC6] transition-colors">
+                              LOG
+                            </button>
+                            <button className="border-3 border-black bg-white px-3 py-1 text-xs font-bold hover:bg-[#8C6CFF] transition-colors">
+                              ⋮
+                            </button>
+                          </div>
                         </div>
-                        
-                        <div className="flex gap-2">
-                          <button className="border-3 border-black bg-white px-3 py-1 text-xs font-bold hover:bg-[#FF7AC6] transition-colors">
-                            LOG
-                          </button>
-                          <button className="border-3 border-black bg-white px-3 py-1 text-xs font-bold hover:bg-[#8C6CFF] transition-colors">
-                            ⋮
-                          </button>
-                        </div>
+
+                        {/* Upload Proof Button - ADDED HERE */}
+                        <Link
+                          href={`/habits/verify?habitId=${habit._id}&habitName=${encodeURIComponent(habit.title)}`}
+                          className="w-full border-3 border-black bg-[#6DD3FF] py-2 px-3 text-xs font-bold hover:bg-[#7FFFD4] transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Camera className="w-4 h-4" />
+                          UPLOAD PROOF
+                        </Link>
                       </div>
                     </div>
                   </div>
