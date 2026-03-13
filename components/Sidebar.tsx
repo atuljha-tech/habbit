@@ -17,14 +17,15 @@ import {
 export default function Sidebar() {
   const pathname = usePathname()
 
-  const links = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "#FF7AC6" },
-    { name: "Today", href: "/today", icon: Calendar, color: "#8C6CFF" },
-    { name: "Habits", href: "/habits", icon: Target, color: "#FFD84D" },
-    { name: "Journal", href: "/journal", icon: BookOpen, color: "#7FFFD4" },
-    { name: "History", href: "/history", icon: History, color: "#6DD3FF" },
-    { name: "Journal History", href: "/journal/history", icon: History, color: "#FF7AC6" },
-  ]
+ const links = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, color: "#FF7AC6" },
+  { name: "Today", href: "/today", icon: Calendar, color: "#8C6CFF" },
+  { name: "Habits", href: "/habits", icon: Target, color: "#FFD84D" },
+  { name: "Journal", href: "/journal", icon: BookOpen, color: "#7FFFD4" },
+  { name: "History", href: "/history", icon: History, color: "#6DD3FF" },
+  { name: "Journal History", href: "/journal/history", icon: History, color: "#FF7AC6" },
+  { name: "Mood Ring", href: "/mood", icon: Sparkles, color: "#FF9F6E" },
+]
 
   const isActive = (href: string) => pathname === href
 
